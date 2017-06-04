@@ -1,0 +1,63 @@
+#################################################################################################################
+###################### Text Analysis - Frequency Analysis by Bar Chart (As of 17-01-13) #########################
+
+#Package Installation
+install.packages(c("KoNLP", "tm", "ggplot2", "fpc", "dplyr"))
+install.packages("lsa")
+install.packages("GPArotation")
+install.packages("tm")
+install.packages("dplyr")
+install.packages("data.table")
+install.packages("readr")
+
+
+#Attach library
+library(KoNLP)
+library(ggplot2)
+library(tm)
+library(fpc)
+library(dplyr)
+library(data.table)
+library(lsa)
+library(GPArotation)
+library(tm)
+library(stringr)
+library(topicmodels)
+library(LDAvis)
+library(servr)
+library(LDAvisData)
+library(lda)
+library('slam')
+library(dplyr)
+library(stringi)
+library(LDAvis)
+library(data.table)
+library(readr)
+
+
+#Attach Dicitionary
+useSejongDic()
+options(encoding = 'UTF-8')
+
+# Read data
+rawdata<-fread("ex.csv",header = T)
+attach(rawdata)
+data<-subset(rawdata, select = Q03)
+
+#
+data1<-na.omit(data)
+data2<-sapply(data1,extractNoun, USE.NAMES = F)
+data3<-unlist(data2)
+data4 = Filter(function(x){nchar(x)>=2}, data3)
+#
+wordcount <- table(data4)
+wordcount1<-sort(wordcount, decreasing = T)
+data5<-data.table(wordcount1)
+data6<-top_n(data5,15,data5$N)
+data6$data4<-reorder(data6$data4,data6$N)
+
+
+#Visualize
+result<-ggplot(data6, aes(x=data6$data4, y=data6$N, fill = data6$data4)) + geom_bar(position="dodge", stat="identity") + coord_flip() + ggtitle("comments") + xlab('keywords') + ylab('count')
+result<-result + geom_text(aes(label=data6$N), position = position_dodge(0.5), vjust=0)
+result
