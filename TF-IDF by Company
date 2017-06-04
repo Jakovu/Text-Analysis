@@ -1,0 +1,82 @@
+################################################################################################
+############################################ TF-IDF ############################################ 
+
+install.packages("dplyr")
+install.packages("tidytext")
+install.packages("data.table")
+install.packages("readr")
+
+library(dplyr)
+library(tidytext)
+library(data.table)
+library(readr)
+
+rawdata<-fread("ex.csv",header = T)
+attach(rawdata)
+
+Q03_words <- subset(rawdata, subset = (Industry == "Service")) %>%
+  unnest_tokens(word, Q03) %>%
+  count(Company, word, sort = TRUE) %>%
+  ungroup()
+
+total_words <- Q03_words %>% 
+  group_by(Company) %>% 
+  summarize(total = sum(n))
+
+Q03_words <- left_join(Q03_words, total_words)
+Q03_words
+
+
+library(ggplot2)
+library(viridis)
+
+ggplot(Q03_words, aes(n/total, fill = Company)) +
+  geom_histogram(alpha = 0.8, show.legend = FALSE) +
+  xlim(NA, 0.0009) +
+  labs(title = "Term Frequency Distribution in Jane Austen's Novels",
+       y = "Count") +
+  facet_wrap(~Company, ncol = 2, scales = "free_y") +
+  theme_minimal(base_size = 13) +
+  scale_fill_viridis(end = 0.85, discrete=TRUE) +
+  theme(strip.text=element_text(hjust=0)) +
+  theme(strip.text = element_text(face = "italic"))
+
+Q03_words <- Q03_words %>%
+  bind_tf_idf(word, Company, n)
+Q03_words
+
+Q03_words %>%
+  select(-total) %>%
+  arrange(desc(tf_idf))
+
+#
+library(ggstance)
+library(ggthemes)
+
+plot_Q03 <- Q03_words %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word))))
+ggplot(plot_Q03[1:20,], aes(tf_idf, word, fill = Company, alpha = tf_idf)) +
+  geom_barh(stat = "identity") +
+  labs(title = "Highest tf-idf words in Q03",
+       y = NULL, x = "tf-idf") +
+  theme_tufte(base_family = "Arial", base_size = 13, ticks = FALSE) +
+  scale_alpha_continuous(range = c(0.6, 1), guide = FALSE) +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_fill_viridis(end = 0.85, discrete=TRUE) +
+  theme(legend.title=element_blank()) +
+  theme(legend.justification=c(1,0), legend.position=c(1,0))
+
+#
+plot_Q03 <- plot_Q03 %>% group_by(Company) %>% top_n(3) %>% ungroup
+ggplot(plot_Q03, aes(tf_idf, word, fill = Company, alpha = tf_idf)) +
+  geom_barh(stat = "identity", show.legend = FALSE) +
+  labs(title = "Highest tf-idf words in Q03",
+       y = NULL, x = "tf-idf") +
+  facet_wrap(~Company, ncol = 2, scales = "free") +
+  theme_tufte(base_family = "Arial", base_size = 13, ticks = FALSE) +
+  scale_alpha_continuous(range = c(0.6, 1)) +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_fill_viridis(end = 0.85, discrete=TRUE) +
+  theme(strip.text=element_text(hjust=0)) +
+  theme(strip.text = element_text(face = "italic"))
